@@ -17,13 +17,13 @@
         
         const AgendaTracker = () => {
           const agenda = [
-            { id: 1, item: "Opening by CEO", start: "9:30", end: "9:40", duration: 10 },
-            { id: 2, item: "Serena's sharing on OCAI", start: "9:40", end: "10:15", duration: 35 },
-            { id: 3, item: "Team Breakout discussion", start: "10:15", end: "11:00", duration: 45 },
-            { id: 4, item: "Group sharing / presentation", start: "11:00", end: "11:45", duration: 45 },
-            { id: 5, item: "CEO and Dr. Geetha Summary of Discussion", start: "11:45", end: "11:50", duration: 5 },
-            { id: 6, item: "HR Reminder for Mid Year Appraisal", start: "11:50", end: "12:00", duration: 10 }
-          ];
+  { id: 1, item: "Opening by CEO", start: "9:30", end: "9:40", duration: 10 },
+  { id: 2, item: "Warm Up & Serena's sharing on OCAI", start: "9:40", end: "10:25", duration: 45 },
+  { id: 3, item: "Team Breakout discussion", start: "10:25", end: "10:55", duration: 30 },
+  { id: 4, item: "Group sharing / presentation", start: "11:00", end: "11:30", duration: 30 },
+  { id: 5, item: "CEO and Dr. Geetha Summary of Discussion", start: "11:30", end: "11:40", duration: 10 },
+  { id: 6, item: "HR Reminder for Mid Year Appraisal", start: "11:50", end: "12:00", duration: 10 }
+];
 
           const [currentIndex, setCurrentIndex] = useState(0);
           const [timeRemaining, setTimeRemaining] = useState(agenda[0].duration * 60);

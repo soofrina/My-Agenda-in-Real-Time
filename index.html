@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Rina's Agenda Tracker - Real Time</title>
+    <title>Agenda Tracker - GMT MMT Strategy Meeting</title>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
     <script crossorigin src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.5/babel.min.js"></script>
@@ -16,54 +16,95 @@
         const { useState, useEffect } = React;
         
         const AgendaTracker = () => {
-          const agenda = [
-  { id: 1, item: "Opening by CEO", start: "9:30", end: "9:40", duration: 10 },
-  { id: 2, item: "Warm Up & Serena's sharing on OCAI", start: "9:40", end: "10:25", duration: 45 },
-  { id: 3, item: "Team Breakout discussion", start: "10:25", end: "10:55", duration: 30 },
-  { id: 4, item: "Group sharing / presentation", start: "11:00", end: "11:30", duration: 30 },
-  { id: 5, item: "CEO and Dr. Geetha Summary of Discussion", start: "11:30", end: "11:40", duration: 10 },
-  { id: 6, item: "HR Reminder for Mid Year Appraisal", start: "11:50", end: "12:00", duration: 10 }
-];
+          const agendaData = [
+            { id: 1, item: "Opening by CEO", start: "9:30", end: "9:40", duration: 10 },
+            { id: 2, item: "Warm Up & Serena's sharing on OCAI", start: "9:40", end: "10:25", duration: 45 },
+            { id: 3, item: "Team Breakout discussion", start: "10:25", end: "10:55", duration: 30 },
+            { id: 4, item: "Group sharing / presentation", start: "11:00", end: "11:30", duration: 30 },
+            { id: 5, item: "CEO and Dr. Geetha Summary of Discussion", start: "11:30", end: "11:40", duration: 10 },
+            { id: 6, item: "HR Reminder for Mid Year Appraisal", start: "11:50", end: "12:00", duration: 10 }
+          ];
 
           const [currentIndex, setCurrentIndex] = useState(0);
-          const [timeRemaining, setTimeRemaining] = useState(agenda[0].duration * 60);
+          const [timeRemaining, setTimeRemaining] = useState(agendaData[0].duration * 60);
           const [isRunning, setIsRunning] = useState(false);
+          const [currentTime, setCurrentTime] = useState(new Date());
+          const [totalDelay, setTotalDelay] = useState(0);
+
+          useEffect(() => {
+            const timeInterval = setInterval(() => {
+              setCurrentTime(new Date());
+            }, 1000);
+            return () => clearInterval(timeInterval);
+          }, []);
 
           useEffect(() => {
             let interval;
-            if (isRunning && timeRemaining > 0) {
+            if (isRunning) {
               interval = setInterval(() => {
-                setTimeRemaining(prev => {
-                  if (prev <= 1) {
-                    setIsRunning(false);
-                    return 0;
-                  }
-                  return prev - 1;
-                });
+                setTimeRemaining(prev => prev - 1);
               }, 1000);
             }
             return () => clearInterval(interval);
-          }, [isRunning, timeRemaining]);
+          }, [isRunning]);
+
+          useEffect(() => {
+            if (timeRemaining < 0) {
+              const overtime = Math.abs(timeRemaining);
+              setTotalDelay(overtime);
+            }
+          }, [timeRemaining]);
 
           const formatTime = (seconds) => {
-            const mins = Math.floor(seconds / 60);
-            const secs = seconds % 60;
-            return `${mins}:${secs.toString().padStart(2, '0')}`;
+            const isNegative = seconds < 0;
+            const absSeconds = Math.abs(seconds);
+            const mins = Math.floor(absSeconds / 60);
+            const secs = absSeconds % 60;
+            return `${isNegative ? '-' : ''}${mins}:${secs.toString().padStart(2, '0')}`;
+          };
+
+          const formatCurrentTime = (date) => {
+            return date.toLocaleTimeString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              second: '2-digit',
+              hour12: false 
+            });
           };
 
           const getTimeColor = () => {
-            const totalSeconds = agenda[currentIndex].duration * 60;
+            if (timeRemaining < 0) return 'text-red-600';
+            const totalSeconds = agendaData[currentIndex].duration * 60;
             const percentage = (timeRemaining / totalSeconds) * 100;
             if (percentage > 50) return 'text-green-600';
             if (percentage > 25) return 'text-yellow-600';
-            return 'text-red-600';
+            return 'text-orange-600';
+          };
+
+          const calculateProjectedEndTime = () => {
+            const baseEndTime = new Date();
+            baseEndTime.setHours(12, 0, 0, 0);
+            
+            const delayMinutes = Math.floor(totalDelay / 60);
+            baseEndTime.setMinutes(baseEndTime.getMinutes() + delayMinutes);
+            
+            return baseEndTime.toLocaleTimeString('en-US', { 
+              hour: '2-digit', 
+              minute: '2-digit',
+              hour12: false 
+            });
+          };
+
+          const getDelayForNextSessions = () => {
+            if (timeRemaining >= 0) return 0;
+            return Math.floor(Math.abs(timeRemaining) / 60);
           };
 
           const handleNext = () => {
-            if (currentIndex < agenda.length - 1) {
+            if (currentIndex < agendaData.length - 1) {
               const nextIndex = currentIndex + 1;
               setCurrentIndex(nextIndex);
-              setTimeRemaining(agenda[nextIndex].duration * 60);
+              setTimeRemaining(agendaData[nextIndex].duration * 60);
               setIsRunning(false);
             }
           };
@@ -72,62 +113,153 @@
             if (currentIndex > 0) {
               const prevIndex = currentIndex - 1;
               setCurrentIndex(prevIndex);
-              setTimeRemaining(agenda[prevIndex].duration * 60);
+              setTimeRemaining(agendaData[prevIndex].duration * 60);
               setIsRunning(false);
+              setTotalDelay(0);
             }
           };
 
           const handleReset = () => {
-            setTimeRemaining(agenda[currentIndex].duration * 60);
+            setTimeRemaining(agendaData[currentIndex].duration * 60);
             setIsRunning(false);
+            setTotalDelay(0);
+          };
+
+          const adjustTime = (minutes) => {
+            setTimeRemaining(prev => prev + (minutes * 60));
           };
 
           return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 p-8">
               <div className="max-w-6xl mx-auto">
                 <div className="bg-white rounded-lg shadow-lg p-6 mb-6">
-                  <h1 className="text-3xl font-bold text-gray-800 mb-2">GMT MMT Strategy Meeting 30 Sept 2025</h1>
-                  <p className="text-gray-600">My Agenda in Real-Time</p>
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h1 className="text-3xl font-bold text-gray-800">GMT MMT Strategy Meeting</h1>
+                      <p className="text-xl text-gray-700 mb-2">30 Sept 2025</p>
+                      <p className="text-gray-600">Track your agenda in real-time</p>
+                    </div>
+                    <div className="text-right">
+                      <div className="flex items-center gap-2 text-gray-600 mb-1">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span className="text-sm">Current Time</span>
+                      </div>
+                      <div className="text-4xl font-bold text-indigo-600">
+                        {formatCurrentTime(currentTime)}
+                      </div>
+                    </div>
+                  </div>
                 </div>
+
+                {totalDelay > 0 && (
+                  <div className="bg-red-50 border-2 border-red-300 rounded-lg p-4 mb-6 flex items-center gap-3">
+                    <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                    </svg>
+                    <div className="flex-1">
+                      <div className="font-bold text-red-800">Meeting Running Behind Schedule</div>
+                      <div className="text-red-700 text-sm">
+                        Projected end time: <span className="font-bold">{calculateProjectedEndTime()}</span>
+                        {getDelayForNextSessions() > 0 && (
+                          <span> • Next sessions delayed by {getDelayForNextSessions()} min</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <div className="bg-indigo-600 text-white rounded-lg shadow-xl p-8 mb-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
-                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                      </svg>
+                      <div className="w-8 h-8">
+                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      </div>
                       <span className="text-xl font-semibold">Currently Presenting</span>
                     </div>
                     <div className="text-sm opacity-90">
-                      Item {currentIndex + 1} of {agenda.length}
+                      Item {currentIndex + 1} of {agendaData.length}
                     </div>
                   </div>
                   
-                  <h2 className="text-4xl font-bold mb-6">{agenda[currentIndex].item}</h2>
+                  <h2 className="text-4xl font-bold mb-6">{agendaData[currentIndex].item}</h2>
                   
                   <div className="grid grid-cols-2 gap-6 mb-8">
                     <div className="bg-white bg-opacity-20 rounded-lg p-4">
                       <div className="text-sm opacity-90 mb-1">Start Time</div>
-                      <div className="text-3xl font-bold">{agenda[currentIndex].start}</div>
+                      <div className="text-3xl font-bold">{agendaData[currentIndex].start}</div>
                     </div>
                     <div className="bg-white bg-opacity-20 rounded-lg p-4">
                       <div className="text-sm opacity-90 mb-1">End Time</div>
-                      <div className="text-3xl font-bold">{agenda[currentIndex].end}</div>
+                      <div className="text-3xl font-bold">{agendaData[currentIndex].end}</div>
                     </div>
                   </div>
 
-                  <div className="bg-white rounded-lg p-6 text-center">
+                  <div className="bg-white rounded-lg p-6 text-center mb-4">
                     <div className="text-gray-600 text-sm mb-2">TIME REMAINING</div>
                     <div className={`text-7xl font-bold ${getTimeColor()}`}>
                       {formatTime(timeRemaining)}
                     </div>
                     <div className="text-gray-500 text-sm mt-2">
-                      Duration: {agenda[currentIndex].duration} minutes
+                      Duration: {agendaData[currentIndex].duration} minutes
+                    </div>
+                    {timeRemaining < 0 && (
+                      <div className="mt-3 flex items-center justify-center gap-2 text-red-600 font-bold">
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                        <span>RUNNING OVER TIME!</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="bg-white bg-opacity-10 rounded-lg p-4 mb-4">
+                    <div className="text-sm mb-2 text-center opacity-90">Quick Time Adjustments</div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => adjustTime(-5)}
+                        className="flex-1 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                        5 min
+                      </button>
+                      <button
+                        onClick={() => adjustTime(-1)}
+                        className="flex-1 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20 12H4" />
+                        </svg>
+                        1 min
+                      </button>
+                      <button
+                        onClick={() => adjustTime(1)}
+                        className="flex-1 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        1 min
+                      </button>
+                      <button
+                        onClick={() => adjustTime(5)}
+                        className="flex-1 bg-white bg-opacity-20 hover:bg-opacity-30 text-white font-semibold py-2 px-4 rounded-lg transition flex items-center justify-center gap-2"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        5 min
+                      </button>
                     </div>
                   </div>
 
-                  <div className="flex gap-4 mt-6">
+                  <div className="flex gap-4">
                     <button
                       onClick={() => setIsRunning(!isRunning)}
                       className="flex-1 bg-white text-indigo-600 font-semibold py-3 px-6 rounded-lg hover:bg-gray-100 transition"
@@ -153,7 +285,7 @@
                   </button>
                   <button
                     onClick={handleNext}
-                    disabled={currentIndex === agenda.length - 1}
+                    disabled={currentIndex === agendaData.length - 1}
                     className="flex-1 bg-white text-gray-700 font-semibold py-3 px-6 rounded-lg shadow hover:bg-gray-50 transition disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next Item →
@@ -163,13 +295,14 @@
                 <div className="bg-white rounded-lg shadow-lg p-6">
                   <h3 className="text-2xl font-bold text-gray-800 mb-4">Full Agenda</h3>
                   <div className="space-y-3">
-                    {agenda.map((item, index) => (
+                    {agendaData.map((item, index) => (
                       <div
                         key={item.id}
                         onClick={() => {
                           setCurrentIndex(index);
                           setTimeRemaining(item.duration * 60);
                           setIsRunning(false);
+                          setTotalDelay(0);
                         }}
                         className={`flex items-center justify-between p-4 rounded-lg cursor-pointer transition ${
                           index === currentIndex
